@@ -29,7 +29,7 @@ namespace Mappy.Analyzer
 
         private static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Description, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get { return ImmutableArray.Create(Rule); } }
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -37,7 +37,7 @@ namespace Mappy.Analyzer
             context.RegisterCompilationAction(AnalyzeCompilation);
         }
 
-        private void AnalyzeCompilation(CompilationAnalysisContext context)
+        private static void AnalyzeCompilation(CompilationAnalysisContext context)
         {
             var compilation = context.Compilation;
             foreach (var tree in compilation.SyntaxTrees)
@@ -53,13 +53,14 @@ namespace Mappy.Analyzer
 
         private static void AnalyzeSemantic(SemanticModelAnalysisContext context)
         {
-            SemanticModel model = context.SemanticModel;
+            var model = context.SemanticModel;
             var result = AnalyzeForMappings(model);
             foreach (var item in result)
             {
                 context.ReportDiagnostic(CreateDiagnostic(item));
             };
         }
+
         private static Diagnostic CreateDiagnostic(KeyValuePair<ISymbol, HashSet<string>> item)
         {
             return Diagnostic.Create(Rule, item.Key.Locations[0], string.Join(", ", item.Value));
@@ -68,7 +69,6 @@ namespace Mappy.Analyzer
         private static Dictionary<ISymbol, HashSet<string>> AnalyzeForMappings(SemanticModel model)
         {
             var result = new Dictionary<ISymbol, HashSet<string>>();
-
             var methods = GetRelevantMethodsFromModel(model);
 
             foreach (var methodSyntax in methods)
@@ -83,22 +83,17 @@ namespace Mappy.Analyzer
 
                 var methodResult = AnalyzeMethodBody(methodSyntax, ignoredMembers, targetArgument).ToList();
 
-                if (methodResult.Any())
+                foreach (var item in methodResult)
                 {
                     if (!result.ContainsKey(method))
                     {
                         result.Add(method, new HashSet<string>());
                     }
-
-                    foreach (var item in methodResult)
-                    {
-                        result[method].Add(item);
-                    }
+                    result[method].Add(item);
                 }
             }
 
             return result;
-
         }
 
         private static IEnumerable<string> AnalyzeMethodBody(MethodDeclarationSyntax methodSyntax, List<string> ignoredMembers, IParameterSymbol targetArgument)
@@ -129,13 +124,13 @@ namespace Mappy.Analyzer
             return targetTypeArguments.Any() ? targetTypeArguments.Last() : null;
         }
 
-        private static List<string> ExtractIgnoredMembersFromAttribute(IMethodSymbol method)
+        private static List<string> ExtractIgnoredMembersFromAttribute(ISymbol symbol)
         {
-            var attribute = method.GetAttributes().FirstOrDefault(a => a.AttributeClass.MetadataName == _mappingAttributeName);
+            var attribute = symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass.MetadataName == _mappingAttributeName);
             return ExtractIgnoredMembers(attribute);
         }
 
-        private static List<MethodDeclarationSyntax> GetRelevantMethodsFromModel(SemanticModel model)
+        private static IEnumerable<MethodDeclarationSyntax> GetRelevantMethodsFromModel(SemanticModel model)
         {
             var methodDeclarations = model.SyntaxTree.GetRoot().DescendantNodes().OfType<MethodDeclarationSyntax>();
 
@@ -144,13 +139,11 @@ namespace Mappy.Analyzer
                     .Any(al => al.Attributes
                         .Any(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text == _mappingAttributeWithoutAttributeSuffix)
                         )
-                    )
-                .ToList();
+                    );
         }
 
         private static IEnumerable<string> InitializeNotMappedMembers(List<string> ignoredMembers, IParameterSymbol targetTypeArgument)
         {
-
             var members = GetAllMembers(targetTypeArgument.Type);
             var properties = members.Where(m => !m.IsImplicitlyDeclared && m.Kind == SymbolKind.Property);
 
@@ -180,15 +173,15 @@ namespace Mappy.Analyzer
             }
 
             var arg = mappingAttribute.ConstructorArguments.First();
-            if (arg.Kind == TypedConstantKind.Array && arg.Values != null)
+            switch (arg.Kind)
             {
-                return arg.Values.Select(v => v.Value as string).ToList();
+                case TypedConstantKind.Array when arg.Values != null:
+                    return arg.Values.Select(v => v.Value as string).ToList();
+                case TypedConstantKind.Primitive when arg.Value != null:
+                    return new List<string> { arg.Value as string };
+                default:
+                    throw new NotSupportedException("Attributes with these constructor arguments are not supported");
             }
-            if (arg.Kind == TypedConstantKind.Primitive && arg.Value != null)
-            {
-                return new List<string> { arg.Value as string };
-            }
-            throw new NotSupportedException("Attributes with these constructor arguments are not supported");
         }
     }
 }
