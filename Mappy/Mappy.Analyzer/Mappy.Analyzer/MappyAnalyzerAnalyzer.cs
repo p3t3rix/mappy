@@ -27,7 +27,7 @@ namespace Mappy.Analyzer
         private static string _mappingAttributeWithoutAttributeSuffix = "WarnIfNotMappedCompletely";
         //private static string _mappingAttributeWithoutAttributeSuffix= nameof(WarnIfNotMappedCompletelyAttribute).Replace("Attribute","");
 
-        private static DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Description, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(DiagnosticId, Description, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
@@ -96,7 +96,7 @@ namespace Mappy.Analyzer
             return result;
         }
 
-        private static IEnumerable<string> AnalyzeMethodBody(MethodDeclarationSyntax methodSyntax, List<string> ignoredMembers, IParameterSymbol targetArgument)
+        private static IEnumerable<string> AnalyzeMethodBody(BaseMethodDeclarationSyntax methodSyntax, List<string> ignoredMembers, IParameterSymbol targetArgument)
         {
             var targetPropertyName = targetArgument.Name;
             var notMappedMembers = InitializeNotMappedMembers(ignoredMembers, targetArgument);

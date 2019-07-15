@@ -14,8 +14,6 @@ namespace Mappy.ConsoleTest
 
             var result = mapper.Map(new SourceClass {Foo = "asd", Bar = 12, Grandpa = new SourceClass()}, new TargetClass());
             CheckMappings();
-            Console.WriteLine("Hello World!");
-            Console.WriteLine();
         }
 
         public static void CheckMappings()
@@ -29,7 +27,6 @@ namespace Mappy.ConsoleTest
             Console.WriteLine(string.Join(",", methods.Select(m => m.Name)));
         }
     }
-
 
     public class SourceClass : BaseClass
     {
@@ -51,18 +48,16 @@ namespace Mappy.ConsoleTest
 
     public class TargetMapper 
     {
-        //[WarnIfNotMappedCompletely(nameof(TargetClass.Grandpa))]
+        [WarnIfNotMappedCompletely]
         public TargetClass Map(SourceClass source, TargetClass target)
         {
-            
+            return target;
         }
 
         [WarnIfNotMappedCompletely(nameof(SourceClass.Grandpa), nameof(SourceClass.Foo))]
-        public abstract TargetClass MapingTest(SourceClass source, TargetClass target, int coool)
+        public TargetClass MapingTest(SourceClass source, TargetClass target, int coool)
         {
-            target.Bar = 122;
-            target.Bar = 12345;
-            target.Coolio = 000;
+            //target.Bar = 122;
             target.Grandpa = new HashSet<string>();
             return target;
         }
