@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp2.2</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="MappingGenerator" Version="1.5.203" />
+      <PackageReference Include="Mappy.Analyzer" Version="1.0.1" />
+      <PackageReference Include="Mappy.Core" Version="1.0.0" />
+    </ItemGroup>
+
+</Project>
